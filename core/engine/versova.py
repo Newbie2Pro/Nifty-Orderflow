@@ -6,10 +6,10 @@ import threading
 from .protobuf import msg_pb2
 
 class FyersVersovaEngine:
-    def __init__(self, auth_token, api_key, symbol, on_message_callback=None, log_callback=None):
+    def __init__(self, auth_token, api_key, symbols, on_message_callback=None, log_callback=None):
         self.auth_token = auth_token
         self.api_key = api_key
-        self.symbol = symbol
+        self.symbols = symbols if isinstance(symbols, list) else [symbols]
         self.on_message_callback = on_message_callback
         self.log_callback = log_callback or print
         
@@ -253,7 +253,7 @@ class FyersVersovaEngine:
                         "type": 1,
                         "data": {
                             "subs": 1,
-                            "symbols": [self.symbol],
+                            "symbols": self.symbols,
                             "mode": "depth",
                             "channel": "1"
                         }
