@@ -3,6 +3,8 @@ import json
 import hashlib
 import logging
 import requests
+import base64
+import pyotp
 from typing import Dict, Tuple, Optional, Any
 from urllib.parse import parse_qs, urlparse
 from datetime import datetime, timedelta
@@ -145,6 +147,97 @@ class FyersAuth:
         """Generate the app ID hash required for API authentication."""
         return hashlib.sha256(f"{self.client_id}:{self.secret_key}".encode()).hexdigest()
     
+    def auto_login(self) -> bool:
+        """
+        Perform headless login using TOTP and PIN to get auth code, 
+        then generate access token.
+        """
+        fy_id = os.environ.get('FYERS_FY_ID')
+        totp_key = os.environ.get('FYERS_TOTP_KEY')
+        pin = os.environ.get('FYERS_PIN')
+        
+        if not (fy_id and totp_key and pin):
+            logger.error("Auto Login failed: Missing FYERS_FY_ID, FYERS_TOTP_KEY, or FYERS_PIN in env")
+            return False
+            
+        try:
+            logger.info("Starting Auto Login flow...")
+            
+            # Helper for base64
+            def getEncodedString(string):
+                base64_bytes = base64.b64encode(string.encode("ascii"))
+                return base64_bytes.decode("ascii")
+
+            # 1. Send Login OTP
+            URL_SEND_LOGIN_OTP = "https://api-t2.fyers.in/vagator/v2/send_login_otp_v2"
+            res = requests.post(URL_SEND_LOGIN_OTP, json={"fy_id": getEncodedString(fy_id), "app_id": "2"}).json()
+            
+            if 'request_key' not in res:
+                logger.error(f"Auto Login Failed at OTP Request: {res}")
+                return False
+
+            # 2. Verify OTP
+            import time
+            time.sleep(1) # Small delay
+            URL_VERIFY_OTP = "https://api-t2.fyers.in/vagator/v2/verify_otp"
+            otp_val = pyotp.TOTP(totp_key).now()
+            res2 = requests.post(url=URL_VERIFY_OTP, json= {"request_key":res["request_key"],"otp":otp_val}).json()
+            
+            if 'request_key' not in res2:
+                 logger.error(f"Auto Login Failed at OTP Verify: {res2}")
+                 return False
+
+            # 3. Verify PIN
+            ses = requests.Session()
+            URL_VERIFY_OTP2 = "https://api-t2.fyers.in/vagator/v2/verify_pin_v2"
+            payload2 = {"request_key": res2["request_key"], "identity_type": "pin", "identifier": getEncodedString(pin)}
+            res3 = ses.post(URL_VERIFY_OTP2, json=payload2).json()
+            
+            if 'data' not in res3 or 'access_token' not in res3['data']:
+                logger.error(f"Auto Login Failed at PIN Verify: {res3}")
+                return False
+                
+            # Set authorization header for the session
+            ses.headers.update({'authorization': f"Bearer {res3['data']['access_token']}"})
+            
+            # 4. Request Auth Code
+            # Assume client_id format is 'APPID-100' -> 'APPID'
+            app_id_short = self.client_id[:-4] if len(self.client_id) > 4 else self.client_id
+
+            TOKENURL = "https://api-t1.fyers.in/api/v3/token"
+            payload3 = {
+                "fyers_id": fy_id, 
+                "app_id": app_id_short, 
+                "redirect_uri": self.redirect_uri, 
+                "appType": "100", 
+                "code_challenge": "", 
+                "state": "None", 
+                "scope": "", 
+                "nonce": "", 
+                "response_type": "code", 
+                "create_cookie": True
+            }
+            
+            res4 = ses.post(TOKENURL, json=payload3).json()
+            
+            if 'Url' not in res4:
+                 logger.error(f"Auto Login Failed at Token Request: {res4}")
+                 return False
+                 
+            url = res4['Url']
+            auth_code = self.extract_auth_code(url)
+            
+            if not auth_code:
+                logger.error("Auto Login Failed: Could not extract auth code")
+                return False
+                
+            # 5. Generate Access Token
+            return self.generate_access_token(auth_code)
+
+        except Exception as e:
+            logger.error(f"Auto Login Exception: {str(e)}")
+            return False
+
     def get_auth_url(self, state: Optional[str] = None) -> str:
         """Get the Fyers authentication URL for web-based authentication."""
         params = {

@@ -31,6 +31,13 @@ def chart():
 def login():
     return redirect(auth.get_auth_url())
 
+@main.route('/auto-login')
+def auto_login():
+    if auth.auto_login():
+        return redirect('/chart')
+    else:
+        return "Auto Login failed. Check logs for details.", 400
+
 @main.route('/fyers/callback')
 def fyers_callback():
     auth_code = request.args.get('auth_code') or request.args.get('code')
