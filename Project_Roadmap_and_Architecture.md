@@ -36,7 +36,11 @@ We are merging the best of three worlds into a high-performance trading dashboar
 *   **Protocol:** Fyers Versova (Protobuf over Binary WebSockets).
 *   **Compliance:** Maintain the "Midnight Token Cleanup" from `fyers-websockets`.
 
-## 3. Roadmap
+## 4. Operational Guidelines for Gemini Agent
+*   **Testing:** Gemini must test all new features and UI changes using `playwright` (via browser tools) and `chrome-devtools` as and when needed.
+*   **Workflow:** Starting from the next iteration, Gemini must **test first** and verify functionality before pushing changes to GitHub.
+
+## 5. Roadmap
 
 ### Phase 1: Engine Transplant (Weeks 1-2)
 *   **Goal:** Get `chartink` running with the `fyers-websockets` Protobuf engine.
