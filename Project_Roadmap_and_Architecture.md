@@ -38,35 +38,39 @@ We are merging the best of three worlds into a high-performance trading dashboar
 
 ## 4. Operational Guidelines for Gemini Agent
 *   **Testing:** Gemini must test all new features and UI changes using `playwright` (via browser tools) and `chrome-devtools` as and when needed.
-*   **Workflow:** Starting from the next iteration, Gemini must **test first** and verify functionality before pushing changes to GitHub.
+*   **Workflow:** Starting from the next iteration, Gemini must **test first** and verify functionality before pushing changes to GitHub (https://github.com/Newbie2Pro/Nifty-Orderflow).
 
 ## 5. Roadmap
 
-### Phase 1: Engine Transplant (Weeks 1-2)
+### Phase 1: Engine Transplant (Weeks 1-2) - **COMPLETED**
 *   **Goal:** Get `chartink` running with the `fyers-websockets` Protobuf engine.
 *   **Action:**
-    1.  Migrate `msg_pb2.py` and the `asyncio` websocket loop into `app/socket_events.py`.
-    2.  Ensure authentication uses the `database.py` token management from `fyers-websockets`.
-    3.  Add an **AutoLogin** button to the main landing page using the headless login logic (TOTP/PIN) from `ActiveDataDownloader.py` for seamless session initialization.
-    4.  Successfully stream raw 50-level depth into the Flask console.
+    1.  [x] Migrate `msg_pb2.py` and the `asyncio` websocket loop into `app/socket_events.py`.
+    2.  [x] Ensure authentication uses the `database.py` token management from `fyers-websockets`.
+    3.  [x] Add an **AutoLogin** button to the main landing page using the headless login logic (TOTP/PIN) from `ActiveDataDownloader.py` for seamless session initialization.
+    4.  [x] Successfully stream raw 50-level depth into the Flask console.
+    *   **Recent Fixes:**
+        *   [x] Fixed symbol search "No matching symbols" error by auto-refreshing the master DB.
+        *   [x] Fixed backend `UnicodeEncodeError` in socket events blocking live updates on Windows.
+        *   [x] Implemented dynamic default symbol loading (Active Nifty Future) instead of hardcoded strings.
 
-### Phase 2: Analytics & Persistence (Weeks 3-4)
+### Phase 2: Analytics & Persistence (Weeks 3-4) - **PENDING**
 *   **Goal:** Calculate metrics and save to DuckDB.
 *   **Action:**
-    1.  Implement the `calculate_order_book_imbalance` and `interpret_imbalance` functions in the backend.
-    2.  Setup DuckDB tables for `tick_data` and `book_snapshots`.
-    3.  Create a background worker to flush `Polars` buffers to DuckDB every 5 seconds.
+    1.  [ ] Implement the `calculate_order_book_imbalance` and `interpret_imbalance` functions in the backend.
+    2.  [ ] Setup DuckDB tables for `tick_data` and `book_snapshots`.
+    3.  [ ] Create a background worker to flush `Polars` buffers to DuckDB every 5 seconds.
 
-### Phase 3: Unified Dashboard (Weeks 5-6)
+### Phase 3: Unified Dashboard (Weeks 5-6) - **IN PROGRESS**
 *   **Goal:** A single UI for Charts, DOM, and Imbalance.
 *   **Action:**
-    1.  Create a "Unified Dashboard" template that hosts the Lightweight Chart and the Imbalance Monitor widgets.
-    2.  Implement the "Large Order Watch" tile using the live trade stream.
-    3.  Add the symbol search widget using local Master CSV files for instant response.
+    1.  [ ] Create a "Unified Dashboard" template that hosts the Lightweight Chart and the Imbalance Monitor widgets.
+    2.  [ ] Implement the "Large Order Watch" tile using the live trade stream.
+    3.  [x] Add the symbol search widget using local Master CSV files for instant response. (Completed with multi-term search and proper F&O descriptions)
 
-### Phase 4: Polish & Advanced Metrics (Week 7+)
+### Phase 4: Polish & Advanced Metrics (Week 7+) - **PENDING**
 *   **Goal:** Replicate professional "Order Flow" metrics.
 *   **Action:**
-    1.  Implement **Cumulative Volume Delta (CVD)**.
-    2.  Build the "Market Regime" badges (Bullish/Bearish/Neutral).
-    3.  Add sound alerts for large orders (as seen in `flowsurface`).
+    1.  [ ] Implement **Cumulative Volume Delta (CVD)**.
+    2.  [ ] Build the "Market Regime" badges (Bullish/Bearish/Neutral).
+    3.  [ ] Add sound alerts for large orders (as seen in `flowsurface`).
