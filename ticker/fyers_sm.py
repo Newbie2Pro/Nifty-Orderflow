@@ -131,9 +131,20 @@ class SymbolMaster:
         return self._fetch_symbols(query, {"limit": limit})
 
     def search_symbols(self, search_term: str, table_name: str = 'nse_fo_symbols', limit: int = 10) -> list:
-        """Search for symbols containing the search term."""
-        query = "SELECT symbol_ticker FROM {} WHERE symbol_ticker LIKE :search LIMIT :limit".format(table_name)
-        return self._fetch_symbols(query, {"search": f"%{search_term}%", "limit": limit})
+        """Search for symbols containing the search term(s)."""
+        terms = search_term.split()
+        if not terms:
+            return []
+            
+        conditions = []
+        params = {"limit": limit}
+        for i, term in enumerate(terms):
+            conditions.append("symbol_ticker LIKE :term{}".format(i))
+            params["term{}".format(i)] = "%{}%".format(term)
+            
+        where_clause = " AND ".join(conditions)
+        query = "SELECT symbol_ticker FROM {} WHERE {} LIMIT :limit".format(table_name, where_clause)
+        return self._fetch_symbols(query, params)
     
     def get_equity_symbols(self, limit: int = 10) -> list:
         """Get equity symbols (symbols ending with -EQ) from nse_cm_symbols or all tables."""
@@ -278,16 +289,28 @@ class SymbolMaster:
             return []
 
     def search_symbols_with_expiry_info(self, search_term: str, table_name: str = 'nse_fo_symbols', limit: int = 10) -> list:
-        """Search for symbols with expiry information included."""
+        """Search for symbols with expiry information included, supporting multi-term search."""
+        terms = search_term.split()
+        if not terms:
+            return []
+            
+        conditions = []
+        params = {"limit": limit}
+        for i, term in enumerate(terms):
+            conditions.append("symbol_ticker LIKE :term{}".format(i))
+            params["term{}".format(i)] = "%{}%".format(term)
+            
+        where_clause = " AND ".join(conditions)
+        
         try:
             with self.engine.connect() as conn:
-                query = f"""
+                query = """
                 SELECT symbol_ticker, expiry_date, underlying_symbol, option_type, strike_price
-                FROM {table_name} 
-                WHERE symbol_ticker LIKE :search 
+                FROM {} 
+                WHERE {} 
                 LIMIT :limit
-                """
-                result = conn.execute(text(query), {"search": f"%{search_term}%", "limit": limit})
+                """.format(table_name, where_clause)
+                result = conn.execute(text(query), params)
                 symbols_data = []
                 for row in result.fetchall():
                     symbols_data.append({
@@ -397,12 +420,27 @@ class SymbolMaster:
         description_parts = []
         if symbol_data.get('underlying_symbol'):
             description_parts.append(f"{symbol_data['underlying_symbol']}")
-        if symbol_data.get('strike_price'):
-            strike_price = self._format_strike_price(symbol_data['strike_price'])
-            description_parts.append(f"{strike_price}")
-        if symbol_data.get('option_type'):
-            description_parts.append(f"{symbol_data['option_type']}")
         
+        strike_price = symbol_data.get('strike_price')
+        # Skip placeholder strike prices (0, -1) - handle as string or int
+        try:
+            is_placeholder = strike_price is None or str(strike_price).strip() in ['', '0', '-1', '0.0', '-1.0']
+        except:
+            is_placeholder = True
+
+        if not is_placeholder:
+            formatted_strike = self._format_strike_price(strike_price)
+            description_parts.append(f"{formatted_strike}")
+            
+        opt_type = symbol_data.get('option_type')
+        # Skip placeholder option types (XX)
+        if opt_type and str(opt_type).strip() not in ['XX', 'None', '', 'nan']:
+            description_parts.append(f"{opt_type}")
+        
+        # If it's a future (XX or no strike), add "FUT"
+        if (not opt_type or str(opt_type).strip() == 'XX') and is_placeholder:
+            description_parts.append("FUT")
+            
         return " | ".join(description_parts) if description_parts else f"NSE:{symbol_data.get('symbol', '')}"
 
     def unified_symbol_search(self, query: str = '', category: str = 'All', limit: int = 20):
