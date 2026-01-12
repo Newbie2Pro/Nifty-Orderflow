@@ -60,7 +60,7 @@ const LAYOUTS = [
     '1fr 1fr / 1fr 1fr',       // 4 charts (2 rows, 2 cols)    
 ];
 const CHART_DEFAULTS = {
-    symbol: 'NSE:NIFTY25SEPFUT',
+    symbol: 'NSE:NIFTY26JANFUT',
     timeframe: '5m',
     layout: { attributionLogo: false, textColor: '#B2B5BE', background: { type: 'solid', color: '#181A20' } },
     grid: { vertLines: { color: '#22242B' }, horzLines: { color: '#22242B' } },

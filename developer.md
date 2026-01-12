@@ -168,7 +168,7 @@ WebSocket messages for live updates:
 
 ```javascript
 {
-    symbol: "NSE:NIFTY25SEPFUT",
+    symbol: "NSE:NIFTY26JANFUT",
     chart_id: "chart-0",
     timeframe: "5m",
     timestamp: 1699123456789,
@@ -205,7 +205,7 @@ WebSocket event for subscribing to live updates:
 
 ```javascript
 socket.emit('subscribe_symbol', {
-    symbol: "NSE:NIFTY25SEPFUT",
+    symbol: "NSE:NIFTY26JANFUT",
     timeframe: "5m",
     bucket_size: 0.05,
     multiplier: 100,
@@ -221,7 +221,7 @@ POST /api/clear_processor_state
 Content-Type: application/json
 
 {
-    "symbol": "NSE:NIFTY25SEPFUT",
+    "symbol": "NSE:NIFTY26JANFUT",
     "timeframe": "5m",
     "bucket_size": 0.05,
     "multiplier": 100
