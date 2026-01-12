@@ -24,7 +24,8 @@ def index():
 
 @main.route('/chart')
 def chart():
-    return render_template('chart.html')
+    default_symbol = symbol_master.get_active_nifty_future()
+    return render_template('chart.html', default_symbol=default_symbol)
 
 # Authentication routes
 @main.route('/login')

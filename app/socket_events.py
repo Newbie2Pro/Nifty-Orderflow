@@ -186,12 +186,12 @@ def start_live_feed(symbol, timeframe, bucket_size, multiplier, hist_seed=None):
             # Call process_live_data with hist_last_candle to seed internal state
             # This properly initializes cumulative delta from historical data
             process_live_data(seed_msg, timeframe=timeframe, bucket_size=bucket_size, multiplier=multiplier, hist_last_candle=hist_seed)
-            print(f"✓ SEEDED: Live aggregator for {symbol} from frontend historical candle time={hist_seed.get('time')} cum_delta={hist_seed.get('cum_delta', 0)}")
+            print(f"[SEEDED]: Live aggregator for {symbol} from frontend historical candle time={hist_seed.get('time')} cum_delta={hist_seed.get('cum_delta', 0)}")
             
         except Exception as e:
-            print(f"✗ SEED FAILED: Failed to seed processor for {symbol}: {e}")
+            print(f"[SEED FAILED]: Failed to seed processor for {symbol}: {e}")
     else:
-        print(f"⚠ WARNING: No historical seed provided for {symbol} - processor will start without seeding")
+        print(f"[WARNING]: No historical seed provided for {symbol} - processor will start without seeding")
 
     # Start global feed if not already running
     if global_feed is None:
@@ -220,6 +220,7 @@ def start_global_feed():
 
         # Create global callback that processes all incoming messages
         def global_live_data_callback(raw_message):
+            # print(f"DEBUG: Received raw message type: {type(raw_message)}")
             if not raw_message:
                 return
 
@@ -237,13 +238,15 @@ def start_global_feed():
         def process_single_message(msg):
             """Process a single message for all relevant rooms"""
             if not isinstance(msg, dict) or not msg.get('symbol'):
-                print(f"Invalid message format or missing symbol: {msg}")
+                # print(f"Invalid message format or missing symbol: {msg}")
                 return
 
             msg_symbol = msg.get('symbol')
+            # print(f"DEBUG: Processing message for {msg_symbol}")
 
             # Only process if we have subscribers for this symbol
             if msg_symbol not in subscribed_symbols:
+                # print(f"DEBUG: No subscribers for {msg_symbol}")
                 return
 
             # Find rooms subscribed to this symbol

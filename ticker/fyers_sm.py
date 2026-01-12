@@ -326,6 +326,60 @@ class SymbolMaster:
             logger.error(f"DB fetch error for symbols with expiry info: {e}")
             return []
     
+    def get_active_nifty_future(self) -> str:
+        """Get the current active Nifty future symbol (nearest expiry)."""
+        try:
+            import time
+            current_timestamp = int(time.time())
+            # Handle potential milliseconds timestamp in DB (if > 1e10, it's ms)
+            # We'll assume the DB stores consistent timestamps. 
+            # If DB has ms, we need to compare with ms. If s, with s.
+            # Based on _format_expiry_date, it handles both. 
+            # Let's try to fetch the first future with expiry > now.
+            
+            with self.engine.connect() as conn:
+                # First check one row to see timestamp format
+                check = conn.execute(text("SELECT expiry_date FROM nse_fo_symbols LIMIT 1")).fetchone()
+                if check and check[0]:
+                    is_ms = check[0] > 10000000000
+                    now = current_timestamp * 1000 if is_ms else current_timestamp
+                else:
+                    now = current_timestamp
+
+                query = """
+                SELECT symbol_ticker 
+                FROM nse_fo_symbols 
+                WHERE underlying_symbol = 'NIFTY' 
+                AND (option_type = 'XX' OR option_type IS NULL OR option_type = '')
+                AND (strike_price = -1 OR strike_price = 0 OR strike_price IS NULL)
+                AND expiry_date >= :now
+                ORDER BY expiry_date ASC 
+                LIMIT 1
+                """
+                result = conn.execute(text(query), {"now": now}).fetchone()
+                if result:
+                    return result[0]
+                
+                # Fallback if no future found (e.g. data might be old)
+                # Try getting the latest available future
+                query_fallback = """
+                SELECT symbol_ticker 
+                FROM nse_fo_symbols 
+                WHERE underlying_symbol = 'NIFTY' 
+                AND (option_type = 'XX' OR option_type IS NULL OR option_type = '')
+                AND (strike_price = -1 OR strike_price = 0 OR strike_price IS NULL)
+                ORDER BY expiry_date DESC 
+                LIMIT 1
+                """
+                result = conn.execute(text(query_fallback)).fetchone()
+                if result:
+                    return result[0]
+                    
+                return "NSE:NIFTY26JANFUT" # Ultimate fallback
+        except Exception as e:
+            logger.error(f"Error getting active nifty future: {e}")
+            return "NSE:NIFTY26JANFUT"
+
     def list_available_tables(self):
         """List all available symbol tables in the database"""
         try:
